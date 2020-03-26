@@ -24,7 +24,10 @@ var formatKey = "key_%d"
 var formatHash = "hash_%d"
 var formatHashField = "field_%d"
 
-var totalKeys int
+var totalKeys = 1000000
+
+// var ErrNil = errors.New("redigo: nil returned")
+// var ErrPoolExhausted = errors.New("redigo: connection pool exhausted")
 
 type rqstPayloadPopulateKey struct {
 	TotalKeys int `json:"totalKeys"`
@@ -121,7 +124,7 @@ func (r *RedisObject) HGet(hashname, field string) (string, error) {
 	conn := r.pool.Get()
 	defer conn.Close()
 
-	res, err := redis.String(conn.Do("HGET", field, hashname))
+	res, err := redis.String(conn.Do("HGET", hashname, field))
 
 	return res, err
 }
@@ -144,14 +147,12 @@ func (r *RedisObject) PipeSetKeys(totalkeys int) {
 	var err error
 	for i := 0; i < totalkeys; i++ {
 		keyID := fmt.Sprintf(formatKey, i)
-		val := fmt.Sprintf("value of key_%d", i)
 
-		err = conn.Send("HGET", keyID, val)
+		err = conn.Send("SET", keyID, i)
 
 		if err != nil {
-			log.Printf("[PipeSetKeys] error send key key_id:%s val:%s :%+v\n", keyID, val, err)
+			log.Printf("[PipeSetKeys] error send key key_id:%s :%+v\n", keyID, err)
 		}
-
 	}
 
 	err = conn.Flush()
@@ -179,12 +180,11 @@ func (r *RedisObject) PipeSetHashes(totalkeys int) {
 	for i := 0; i < totalkeys; i++ {
 		keyID := getHashShard(i)
 		fieldID := fmt.Sprintf(formatHashField, i)
-		val := fmt.Sprintf("value of key:%s field:%s\n", keyID, fieldID)
 
-		err = conn.Send("HSET", keyID, fieldID, val)
+		err = conn.Send("HSET", keyID, fieldID, i)
 
 		if err != nil {
-			log.Printf("[PipeSetHashes] error send key key_id:%s val:%s :%+v\n", keyID, val, err)
+			log.Printf("[PipeSetHashes] error send key key_id:%s val:%d :%+v\n", keyID, i, err)
 		}
 	}
 
@@ -200,7 +200,7 @@ func (r *RedisObject) PipeSetHashes(totalkeys int) {
 		}
 	}
 
-	log.Printf("PipeSetHashes done")
+	log.Printf("PipeSetHash done")
 	return
 }
 
@@ -311,15 +311,8 @@ func handlerPopulateHash(w http.ResponseWriter, r *http.Request, params httprout
 }
 
 func getHashShard(fieldID int) string {
-	totalHash := 100
-	rangePerHash := totalKeys / totalHash
+	maxFieldPerHash := 1000
 
-	for i := 1; i <= totalHash; i++ {
-		if fieldID < (i * rangePerHash) {
-			return fmt.Sprintf(formatHash, i)
-		}
-	}
-
-	log.Printf("[getHashShard] key not found keyID:%d totalHash:100 totalkeys:%d rangePerHash:%d\n", fieldID, totalKeys, rangePerHash)
-	return ""
+	shard := fieldID / maxFieldPerHash
+	return fmt.Sprintf(formatHash, int(shard))
 }
