@@ -12,14 +12,20 @@ So this Project will help you to proof that it is better to shard lot of small k
 
 
 ## TODO:
-[x] Build sample golang project with connection to redis
-[] Fix error whilst building golang image
-[] Create report / article based with the number
-[] List the redis performance tuning
-[] Dynamic vegetta hit list synced with total keys 
+- [x] Build sample golang project with connection to redis
+- [] Fix error whilst building golang image
+- [x] Create report / article based with the number
+- [] Dynamic vegeta hit list synced with total keys 
 
 
 #### Docker golang image Issue, debug so far:
-1) Dep ensure worked, and downloded into intermediary container whilst building
-2) `Workdir` do create the new folder and `cd` to that path
-3) Everything did copied to `Workdir` path
+1. Dep ensure worked, and downloded into intermediary container whilst building
+2. `Workdir` do create the new folder and `cd` to that path
+3. Everything did copied to `Workdir` path
+
+
+## Highlights
+
+Something is funny albeit with the configuration difference between `SET` and `HSET` keys memory usage is bismall,
+it is not anything near to the memory optimization article nor example from Instagram usage of Redis article.
+Maybe the redis image is not reading the Redis Configuration file specified.
